@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mail Çekici</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2285%22>📧</text></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <h2>📧 Mail Çekici</h2>
+
+  <!-- Yükleniyor animasyonu (üstte) -->
+  <div id="loading" class="loading hidden">
+    <div></div><div></div><div></div>
+  </div>
+
+  <!-- Flash mesajlar -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" id="mailForm">
+    <label for="email">📨 E-posta Adresi:</label>
+    <input type="email" name="email" id="email" required />
+
+    <label for="sifre">🔑 Uygulama Şifresi:</label>
+    <input type="password" name="sifre" id="sifre" required />
+
+    <!-- Mail Türü -->
+    <label>📂 Mail Türü (birden fazla seçebilirsiniz):</label>
+    <div id="veri_turu_checkboxes">
+      <label><input type="checkbox" name="veri_turu" value="ham" /> Ham Mail</label>
+      <label><input type="checkbox" name="veri_turu" value="temiz" /> Temizlenmiş Mail</label>
+      <label><input type="checkbox" name="veri_turu" value="spam" /> Spam ve Sistem Mesajları</label>
+    </div>
+
+    <!-- Format -->
+    <label>💾 Format (birden fazla seçebilirsiniz):</label>
+    <div id="format_checkboxes">
+      <label><input type="checkbox" name="format" value="json" /> JSON</label>
+      <label><input type="checkbox" name="format" value="csv" /> CSV</label>
+    </div>
+
+    <!-- Tarih Filtresi -->
+    <label for="tarih_tipi">📅 Tarih Filtresi:</label>
+    <select name="tarih_tipi" id="tarih_tipi" onchange="gosterAlan()">
+      <option value="">Seç</option>
+      <option value="tek">📅 Şu tarihten itibaren</option>
+      <option value="aralik">📆 İki tarih arası</option>
+    </select>
+
+    <!-- Tek tarih -->
+    <div id="tek_tarih" class="hidden">
+      <label for="tek_tarih_input">Başlangıç Tarihi:</label>
+      <input type="date" name="tek_tarih" id="tek_tarih_input" />
+    </div>
+
+    <!-- Tarih aralığı -->
+    <div id="tarih_aralik" class="hidden">
+      <label for="aralik_baslangic">Başlangıç Tarihi:</label>
+      <input type="date" name="aralik_baslangic" id="aralik_baslangic" />
+      <label for="tarih_bitis">Bitiş Tarihi:</label>
+      <input type="date" name="tarih_bitis" id="tarih_bitis" />
+    </div>
+
+    <!-- Grafik seçimi -->
+    <label for="grafik_kaydet">📊 Grafik Kaydedilsin mi?</label>
+    <select name="grafik_kaydet" id="grafik_kaydet" required>
+      <option value="evet" selected>Evet</option>
+      <option value="hayir">Hayır</option>
+    </select>
+
+    <button type="submit">📥 Mailleri Çek</button>
+  </form>
+
+  <!-- Yükleniyor animasyonu (formun altında da gösterilsin) -->
+  <div id="loading-bottom" class="loading hidden">
+    <div></div><div></div><div></div>
+  </div>
+
+<script>
+  // Tarih tipi seçimine göre alanları göster/gizle
+  function gosterAlan() {
+    const val = document.getElementById("tarih_tipi").value;
+    document.getElementById("tek_tarih").style.display = val === "tek" ? "block" : "none";
+    document.getElementById("tarih_aralik").style.display = val === "aralik" ? "block" : "none";
+  }
+
+  // Sayfa yüklendiğinde alanları kontrol et
+  window.addEventListener("DOMContentLoaded", () => {
+    gosterAlan();
+  });
+
+  // Form gönderilince loading göster
+  document.getElementById("mailForm").addEventListener("submit", () => {
+    const loadingTop = document.getElementById('loading');
+    const loadingBottom = document.getElementById('loading-bottom');
+    if (loadingTop) loadingTop.classList.remove('hidden');
+    if (loadingBottom) loadingBottom.classList.remove('hidden');
+  });
+</script>
+</body>
+</html>

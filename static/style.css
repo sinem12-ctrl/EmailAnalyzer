@@ -1,0 +1,197 @@
+/* Sayfa genel stili */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to right, #e3f2fd, #f5f7fa);
+  padding: 40px;
+  color: #333;
+}
+
+/* Başlık stili */
+h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #1a73e8;
+  font-size: 32px;
+  letter-spacing: 1px;
+}
+
+/* Form kutusu */
+form {
+  max-width: 640px;
+  margin: 0 auto;
+  background: white;
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Etiketler */
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 16px;
+  margin-top: 28px;
+  margin-bottom: 8px;
+}
+
+/* Giriş alanları */
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 15px;
+  transition: border-color 0.3s ease;
+}
+
+/* Giriş alanına odaklanınca */
+input:focus,
+select:focus {
+  border-color: #1a73e8;
+  outline: none;
+}
+
+/* Gönder butonu */
+button {
+  margin-top: 25px;
+  padding: 14px;
+  width: 100%;
+  background-color: #1a73e8;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+/* Buton üzerine gelince */
+button:hover {
+  background-color: #155ec9;
+}
+
+/* Görünmez alanlar */
+.hidden {
+  display: none;
+}
+
+/* Flash mesaj kutuları */
+.success,
+.danger,
+.warning {
+  padding: 14px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+/* Başarı mesajı */
+.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+/* Hata mesajı */
+.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Uyarı mesajı */
+.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+/* Checkbox grupları */
+#veri_turu_checkboxes,
+#format_checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Checkbox etiket kutuları */
+#veri_turu_checkboxes label,
+#format_checkboxes label {
+  background: #f0f0f0;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 15px;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Checkbox etiketi üzerine gelince */
+#veri_turu_checkboxes label:hover,
+#format_checkboxes label:hover {
+  background-color: #e0e0e0;
+}
+
+/* Checkbox boyutu ve tıklanabilirliği */
+#veri_turu_checkboxes input[type="checkbox"],
+#format_checkboxes input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Seçili checkbox etiketi */
+input[type="checkbox"]:checked + label {
+  background-color: #1a73e8;
+  border-color: #155ec9;
+  color: white;
+}
+
+/* Yükleniyor animasyonu kutusu */
+.loading {
+  display: none;
+  gap: 12px;
+  justify-content: center;
+  margin: 10px auto 20px auto;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+/* Yükleniyor görünürse */
+.loading:not(.hidden) {
+  display: flex;
+}
+
+/* Yükleniyor animasyonu topları */
+.loading div {
+  width: 20px;
+  height: 20px;
+  background-color: #5EABD6;
+  border-radius: 50%;
+  box-shadow: inset 0 -0.4em rgba(60, 0, 80, 0.1);
+  animation: cycle 1s ease-in-out infinite;
+}
+
+/* Topların animasyon gecikmeleri */
+.loading div:nth-child(1) { animation-delay: 0s; }
+.loading div:nth-child(2) { animation-delay: 0.2s; }
+.loading div:nth-child(3) { animation-delay: 0.4s; }
+
+/* Sıçrama animasyonu */
+@keyframes cycle {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(1rem); }
+  100% { transform: translateY(0); }
+}
