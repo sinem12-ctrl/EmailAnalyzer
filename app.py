@@ -3,14 +3,13 @@ from pathlib import Path
 from datetime import datetime
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Kendi veri işleme modüllerin
 from veri_isleyiciler.ham_veri import epostalari_getir
 from veri_isleyiciler.temizlenmis_icerige_gore import zincirli_eposta_olustur
 from veri_isleyiciler.spamli_temizleme import spamli_eposta_isle
-
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 # Aynı isimde dosya varsa numaralandırarak yeni isim oluşturur
