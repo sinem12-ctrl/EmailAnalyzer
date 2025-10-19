@@ -161,3 +161,53 @@ def mail_listesi_al(imap, klasor_adi):
     if status != "OK":
         return []
     return mesajlar[0].split()
+def epostalari_getir_yildizli(kullanici, sifre, baslangic=None, bitis=None):
+    context = ssl.create_default_context()
+    imap = imaplib.IMAP4_SSL("imap.gmail.com", port=993, ssl_context=context)
+    imap.login(kullanici, sifre)
+
+    msgid_to_mail = {}
+
+    # Yıldızlı klasörü seç
+    yildizli_ids = mail_listesi_al(imap, '"[Gmail]/Starred"')
+    print(f"⭐ Yıldızlı kutuda {len(yildizli_ids)} mail var.")
+
+    for eposta_id in yildizli_ids:
+        try:
+            _, data = imap.fetch(eposta_id, "(RFC822)")
+            mail = email.message_from_bytes(data[0][1])
+
+            tarih_raw = mail.get("Date")
+            try:
+                tarih = parsedate_to_datetime(tarih_raw)
+            except:
+                tarih = None
+            tarih = to_naive_utc(tarih)
+
+            if baslangic and tarih and tarih < baslangic:
+                continue
+            if bitis and tarih and tarih > bitis:
+                continue
+
+            msg_id = mail.get("Message-ID")
+            if not msg_id:
+                continue
+
+            msgid_to_mail[msg_id] = {
+                "msg_id": msg_id,
+                "in_reply_to": mail.get("In-Reply-To"),
+                "references": mail.get("References"),
+                "kimden": parseaddr(mail.get("From"))[1],
+                "konu": decode_konu(mail.get("Subject")),
+                "tarih": tarih.isoformat() if tarih else None,
+                "base_questions": mail_icerigi_al(mail),
+                "full_answer": None
+            }
+
+        except Exception as e:
+            print("⚠️ Yıldızlı e-posta işlenemedi:", str(e))
+            continue
+
+    imap.logout()
+    print(f"✅ Yıldızlı kutudan alınan e-posta sayısı: {len(msgid_to_mail)}")
+    return list(msgid_to_mail.values())

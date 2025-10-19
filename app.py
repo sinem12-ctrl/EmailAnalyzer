@@ -6,99 +6,95 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Kendi veri işleme modüllerin
-from veri_isleyiciler.ham_veri import epostalari_getir
-from veri_isleyiciler.temizlenmis_icerige_gore import zincirli_eposta_olustur
-from veri_isleyiciler.spamli_temizleme import spamli_eposta_isle
+# Custom data processing modules
+from data_processors.raw_data import fetch_emails, fetch_starred_emails
+from data_processors.cleaned_content import generate_chained_emails
+from data_processors.spam_cleaning import process_spam_emails
 
-
-# Aynı isimde dosya varsa numaralandırarak yeni isim oluşturur
-def benzersiz_dosya_adi(dosya_yolu: Path) -> Path:
-    if not dosya_yolu.exists():
-        return dosya_yolu
-    stem, suffix, parent = dosya_yolu.stem, dosya_yolu.suffix, dosya_yolu.parent
+# Generates a unique file name if a file with the same name exists
+def unique_file_name(file_path: Path) -> Path:
+    if not file_path.exists():
+        return file_path
+    stem, suffix, parent = file_path.stem, file_path.suffix, file_path.parent
     i = 2
     while True:
-        yeni_adi = f"{stem}_{i}{suffix}"
-        yeni_dosya = parent / yeni_adi
-        if not yeni_dosya.exists():
-            return yeni_dosya
+        new_name = f"{stem}_{i}{suffix}"
+        new_file = parent / new_name
+        if not new_file.exists():
+            return new_file
         i += 1
 
-
-# Dosya adı oluşturur: veri türü, bugünün tarihi ve tarih filtresine göre
-def dosya_adi_olustur(veri_turu, bugun_dt, tarih_tipi, tarih_baslangic, tarih_bitis):
-    def tarih_str(dt):
+# Creates a file name based on data type, today's date, and date filter
+def create_file_name(data_type, today_dt, date_type, start_date, end_date):
+    def format_date(dt):
         return dt.strftime("%d%m%Y") if dt else ""
-    bugun_str = tarih_str(bugun_dt)
-    bas_str = tarih_str(tarih_baslangic)
-    bit_str = tarih_str(tarih_bitis)
+    today_str = format_date(today_dt)
+    start_str = format_date(start_date)
+    end_str = format_date(end_date)
 
-    # Spam için özel prefix
-    if veri_turu == "spam":
-        prefix = "spam_mail"
+    if data_type == "spam":
+        prefix = "spam_email"
     else:
-        prefix = f"{veri_turu}_veri"
+        prefix = f"{data_type}_data"
 
-    if tarih_tipi == "aralik":
-        return f"{prefix}_{bugun_str}_{bas_str}_{bit_str}_arasi"
-    elif tarih_tipi == "tek":
-        return f"{prefix}_{bugun_str}_{bas_str}_{bugun_str}_arasi"
+    if date_type == "range":
+        return f"{prefix}_{today_str}_{start_str}_{end_str}_range"
+    elif date_type == "single":
+        return f"{prefix}_{today_str}_{start_str}_{today_str}_range"
     else:
-        return f"{prefix}_{bugun_str}"
+        return f"{prefix}_{today_str}"
 
+# Generates a chart and saves it as PNG
+def generate_and_save_chart(data_list, data_type, date_str, raw_data=None):
+    records = []
+    for i, entry in enumerate(data_list):
+        entry_date_str = entry.get("date")
+        if not entry_date_str and raw_data and i < len(raw_data):
+            entry_date_str = raw_data[i].get("date")
+        entry_date = pd.to_datetime(entry_date_str).date() if entry_date_str else None
+        answered = entry.get("full_answer") and entry.get("full_answer").strip() != ""
+        if entry_date:
+            records.append({"Date": entry_date, "Answered": answered})
 
-# Grafik oluşturur ve PNG olarak kaydeder
-def grafik_olustur_ve_kaydet(veriler, veri_turu, tarih_str, ham_veri=None):
-    kayitlar = []
-    for i, v in enumerate(veriler):
-        tarih_str_val = v.get("tarih")
-        if not tarih_str_val and ham_veri and i < len(ham_veri):
-            tarih_str_val = ham_veri[i].get("tarih")
-        tarih = pd.to_datetime(tarih_str_val).date() if tarih_str_val else None
-        cevap_var_mi = v.get("full_answer") and v.get("full_answer").strip() != ""
-        if tarih:
-            kayitlar.append({"Tarih": tarih, "Cevaplandi": cevap_var_mi})
-
-    if not kayitlar:
-        print(f"⚠️ {veri_turu} için grafik oluşturulamadı: veri yok.")
+    if not records:
+        print(f"⚠️ No chart generated for {data_type}: no data.")
         return False
 
-    df = pd.DataFrame(kayitlar)
-    ozet = df.groupby("Tarih").agg(
-        Soru_Sayisi=('Cevaplandi', 'count'),
-        Cevap_Sayisi=('Cevaplandi', 'sum')
+    df = pd.DataFrame(records)
+    summary = df.groupby("Date").agg(
+        Question_Count=('Answered', 'count'),
+        Answer_Count=('Answered', 'sum')
     ).reset_index()
 
-    ozet = ozet[ozet["Soru_Sayisi"] != 0]
-    if ozet.empty:
-        print(f"⚠️ {veri_turu} için grafik oluşturulamadı: boş özet.")
+    summary = summary[summary["Question_Count"] != 0]
+    if summary.empty:
+        print(f"⚠️ No chart generated for {data_type}: empty summary.")
         return False
 
-    x = np.arange(len(ozet))
+    x = np.arange(len(summary))
     width = 0.35
     plt.figure(figsize=(12, 7))
-    plt.bar(x - width/2, ozet["Soru_Sayisi"], width, label="Soru Sayısı", color='royalblue')
-    plt.bar(x + width/2, ozet["Cevap_Sayisi"], width, label="Cevap Sayısı", color='seagreen')
-    oran = ozet["Cevap_Sayisi"] / ozet["Soru_Sayisi"]
-    plt.plot(x, oran * ozet["Soru_Sayisi"].max(), color='orange', marker='o', label='Cevap Oranı')
-    plt.xticks(x, ozet["Tarih"].astype(str), rotation=45)
-    plt.title("Günlük Soru ve Cevap Sayısı")
+    plt.bar(x - width/2, summary["Question_Count"], width, label="Question Count", color='royalblue')
+    plt.bar(x + width/2, summary["Answer_Count"], width, label="Answer Count", color='seagreen')
+    ratio = summary["Answer_Count"] / summary["Question_Count"]
+    plt.plot(x, ratio * summary["Question_Count"].max(), color='orange', marker='o', label='Answer Ratio')
+    plt.xticks(x, summary["Date"].astype(str), rotation=45)
+    plt.title("Daily Question and Answer Count")
     plt.legend()
 
     for i in x:
-        plt.text(i - width/2, ozet["Soru_Sayisi"].iloc[i] + 0.1, str(ozet["Soru_Sayisi"].iloc[i]), ha='center')
-        plt.text(i + width/2, ozet["Cevap_Sayisi"].iloc[i] + 0.1, str(ozet["Cevap_Sayisi"].iloc[i]), ha='center')
+        plt.text(i - width/2, summary["Question_Count"].iloc[i] + 0.1, str(summary["Question_Count"].iloc[i]), ha='center')
+        plt.text(i + width/2, summary["Answer_Count"].iloc[i] + 0.1, str(summary["Answer_Count"].iloc[i]), ha='center')
     plt.tight_layout()
 
-    indirilenler = Path.home() / "Downloads"
-    indirilenler.mkdir(exist_ok=True)
-    dosya = benzersiz_dosya_adi(indirilenler / f"grafik_{veri_turu}_{tarih_str}.png")
+    downloads = Path.home() / "Downloads"
+    downloads.mkdir(exist_ok=True)
+    file = unique_file_name(downloads / f"chart_{data_type}_{date_str}.png")
     try:
-        plt.savefig(dosya, dpi=300)
-        print(f"✅ Grafik kaydedildi: {dosya}")
+        plt.savefig(file, dpi=300)
+        print(f"✅ Chart saved: {file}")
     except Exception as e:
-        print("❌ Grafik hatası:", e)
+        print("❌ Chart error:", e)
         plt.close()
         return False
     plt.close()
@@ -106,105 +102,122 @@ def grafik_olustur_ve_kaydet(veriler, veri_turu, tarih_str, ham_veri=None):
 
 
 app = Flask(__name__)
-app.secret_key = "gizli_key"  # Flash mesajları için
+app.secret_key = "secret_key"
 
-
-def parse_tarih(t):
+def parse_date(date_str):
     try:
-        return datetime.strptime(t, "%Y-%m-%d") if t else None
+        return datetime.strptime(date_str, "%Y-%m-%d") if date_str else None
     except:
         return None
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         email = request.form.get("email")
-        sifre = request.form.get("sifre")
-        veri_turleri = request.form.getlist("veri_turu")
-        formatlar = request.form.getlist("format")
-        tarih_tipi = request.form.get("tarih_tipi")
-        tarih1_raw = request.form.get("tek_tarih") if tarih_tipi == "tek" else request.form.get("aralik_baslangic")
-        tarih2_raw = None if tarih_tipi == "tek" else request.form.get("tarih_bitis")
-        grafik_kaydet = request.form.get("grafik_kaydet") == "evet"
+        password = request.form.get("password")
+        data_types = request.form.getlist("data_type")
+        formats = request.form.getlist("format")
+        date_type = request.form.get("date_type")
+        start_date_raw = request.form.get("single_date") if date_type == "single" else request.form.get("range_start")
+        end_date_raw = None if date_type == "single" else request.form.get("range_end")
+        save_chart = request.form.get("save_chart") == "yes"
 
-        if not email or not sifre or not veri_turleri or not formatlar:
-            flash("Tüm alanları eksiksiz doldurun!", "danger")
+        if not email or not password or not data_types or not formats:
+            flash("Please fill all required fields!", "danger")
             return redirect("/")
 
-        bugun = datetime.now()
-        tarih1 = parse_tarih(tarih1_raw)
-        tarih2 = parse_tarih(tarih2_raw)
+        today = datetime.now()
+        start_date = parse_date(start_date_raw)
+        end_date = parse_date(end_date_raw)
         downloads = Path.home() / "Downloads"
         downloads.mkdir(exist_ok=True)
 
         try:
-            for veri_turu in veri_turleri:
-                dosya_adi = dosya_adi_olustur(veri_turu, bugun, tarih_tipi, tarih1, tarih2)
+            for data_type in data_types:
+                file_name = create_file_name(data_type, today, date_type, start_date, end_date)
 
-                if veri_turu == "ham":
-                    ham = epostalari_getir(email, sifre, tarih1, tarih2)
-                    if not ham:
-                        flash("❗ Ham veri bulunamadı, dosya oluşturulmadı.", "warning")
+                if data_type == "raw":
+                    raw_emails = fetch_emails(email, password, start_date, end_date)
+                    if not raw_emails:
+                        flash("❗ No raw data found, file not created.", "warning")
                         continue
 
-                    if "json" in formatlar:
-                        dosya_json = benzersiz_dosya_adi(downloads / f"{dosya_adi}.json")
-                        with open(dosya_json, "w", encoding="utf-8") as f:
-                            json.dump(ham, f, ensure_ascii=False, indent=2)
+                    if "json" in formats:
+                        file_json = unique_file_name(downloads / f"{file_name}.json")
+                        with open(file_json, "w", encoding="utf-8") as f:
+                            json.dump(raw_emails, f, ensure_ascii=False, indent=2)
 
-                    if "csv" in formatlar:
-                        dosya_csv = benzersiz_dosya_adi(downloads / f"{dosya_adi}.csv")
-                        pd.DataFrame(ham).to_csv(dosya_csv, index=False)
+                    if "csv" in formats:
+                        file_csv = unique_file_name(downloads / f"{file_name}.csv")
+                        pd.DataFrame(raw_emails).to_csv(file_csv, index=False)
 
-                    if grafik_kaydet:
-                        grafik_olustur_ve_kaydet(ham, "ham", bugun.strftime("%d%m%Y"))
-                    flash("✅ Ham veriler başarıyla kaydedildi.", "success")
+                    if save_chart:
+                        generate_and_save_chart(raw_emails, "raw", today.strftime("%d%m%Y"))
+                    flash("✅ Raw emails saved successfully.", "success")
 
-                elif veri_turu == "temiz":
-                    ham = epostalari_getir(email, sifre, tarih1, tarih2)
-                    temiz = zincirli_eposta_olustur(ham)
-                    if not temiz:
-                        flash("❗ Temizlenmiş veri bulunamadı, dosya oluşturulmadı.", "warning")
+                elif data_type == "cleaned":
+                    raw_emails = fetch_emails(email, password, start_date, end_date)
+                    cleaned = generate_chained_emails(raw_emails)
+                    if not cleaned:
+                        flash("❗ No cleaned data found, file not created.", "warning")
                         continue
 
-                    if "json" in formatlar:
-                        dosya_json = benzersiz_dosya_adi(downloads / f"{dosya_adi}.json")
-                        with open(dosya_json, "w", encoding="utf-8") as f:
-                            json.dump(temiz, f, ensure_ascii=False, indent=2)
+                    if "json" in formats:
+                        file_json = unique_file_name(downloads / f"{file_name}.json")
+                        with open(file_json, "w", encoding="utf-8") as f:
+                            json.dump(cleaned, f, ensure_ascii=False, indent=2)
 
-                    if "csv" in formatlar:
-                        dosya_csv = benzersiz_dosya_adi(downloads / f"{dosya_adi}.csv")
-                        pd.DataFrame(temiz).to_csv(dosya_csv, index=False)
+                    if "csv" in formats:
+                        file_csv = unique_file_name(downloads / f"{file_name}.csv")
+                        pd.DataFrame(cleaned).to_csv(file_csv, index=False)
 
-                    if grafik_kaydet:
-                        grafik_olustur_ve_kaydet(temiz, "temiz", bugun.strftime("%d%m%Y"), ham_veri=ham)
-                    flash("✅ Temizlenmiş veriler başarıyla kaydedildi.", "success")
+                    if save_chart:
+                        generate_and_save_chart(cleaned, "cleaned", today.strftime("%d%m%Y"), raw_data=raw_emails)
+                    flash("✅ Cleaned emails saved successfully.", "success")
 
-                elif veri_turu == "spam":
-                    spam = spamli_eposta_isle(email, sifre, tarih1, tarih2)
-                    if not spam:
-                        flash("❗ Spam veri bulunamadı, dosya oluşturulmadı.", "warning")
+                elif data_type == "spam":
+                    spam_emails = process_spam_emails(email, password, start_date, end_date)
+                    if not spam_emails:
+                        flash("❗ No spam data found, file not created.", "warning")
                         continue
 
-                    if "json" in formatlar:
-                        dosya_json = benzersiz_dosya_adi(downloads / f"{dosya_adi}.json")
-                        with open(dosya_json, "w", encoding="utf-8") as f:
-                            json.dump(spam, f, ensure_ascii=False, indent=2)
+                    if "json" in formats:
+                        file_json = unique_file_name(downloads / f"{file_name}.json")
+                        with open(file_json, "w", encoding="utf-8") as f:
+                            json.dump(spam_emails, f, ensure_ascii=False, indent=2)
 
-                    if "csv" in formatlar:
-                        dosya_csv = benzersiz_dosya_adi(downloads / f"{dosya_adi}.csv")
-                        pd.DataFrame(spam).to_csv(dosya_csv, index=False)
+                    if "csv" in formats:
+                        file_csv = unique_file_name(downloads / f"{file_name}.csv")
+                        pd.DataFrame(spam_emails).to_csv(file_csv, index=False)
 
-                    if grafik_kaydet:
-                        grafik_olustur_ve_kaydet(spam, "spam", bugun.strftime("%d%m%Y"))
-                    flash("✅ Spam veriler başarıyla kaydedildi.", "success")
+                    if save_chart:
+                        generate_and_save_chart(spam_emails, "spam", today.strftime("%d%m%Y"))
+                    flash("✅ Spam emails saved successfully.", "success")
+
+                elif data_type == "starred":
+                    starred = fetch_starred_emails(email, password, start_date, end_date)
+                    if not starred:
+                        flash("❗ No starred emails found, file not created.", "warning")
+                        continue
+
+                    if "json" in formats:
+                        file_json = unique_file_name(downloads / f"{file_name}.json")
+                        with open(file_json, "w", encoding="utf-8") as f:
+                            json.dump(starred, f, ensure_ascii=False, indent=2)
+
+                    if "csv" in formats:
+                        file_csv = unique_file_name(downloads / f"{file_name}.csv")
+                        pd.DataFrame(starred).to_csv(file_csv, index=False)
+
+                    if save_chart:
+                        generate_and_save_chart(starred, "starred", today.strftime("%d%m%Y"))
+                    flash("✅ Starred emails saved successfully.", "success")
 
         except Exception as e:
-            flash(f"❌ Hata oluştu: {e}", "danger")
+            flash(f"❌ An error occurred: {e}", "danger")
 
         return redirect("/")
-    
+
     return render_template("index.html")
 
 if __name__ == "__main__":

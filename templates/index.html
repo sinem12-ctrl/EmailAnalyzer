@@ -28,12 +28,20 @@
     <label for="sifre">🔑 Uygulama Şifresi:</label>
     <input type="password" name="sifre" id="sifre" required />
 
-    <!-- Mail Türü -->
-    <label>📂 Mail Türü (birden fazla seçebilirsiniz):</label>
-    <div id="veri_turu_checkboxes">
-      <label><input type="checkbox" name="veri_turu" value="ham" /> Ham Mail</label>
-      <label><input type="checkbox" name="veri_turu" value="temiz" /> Temizlenmiş Mail</label>
-      <label><input type="checkbox" name="veri_turu" value="spam" /> Spam ve Sistem Mesajları</label>
+    <!-- Mail Türü: Gelen Kutusu -->
+    <label>📥 Gelen Kutusundan Ne Alalım?</label>
+    <div id="veri_turu_gelen">
+      <label><input type="checkbox" name="veri_turu_gelen" value="ham" /> Ham Mail</label>
+      <label><input type="checkbox" name="veri_turu_gelen" value="temiz" /> Temizlenmiş Mail</label>
+      <label><input type="checkbox" name="veri_turu_gelen" value="spam" /> Spam Mail</label>
+    </div>
+
+    <!-- Mail Türü: Yıldızlı Mail -->
+    <label>⭐ Yıldızlı Maillerden Ne Alalım?</label>
+    <div id="veri_turu_yildizli">
+      <label><input type="checkbox" name="veri_turu_yildizli" value="ham" /> Ham Mail</label>
+      <label><input type="checkbox" name="veri_turu_yildizli" value="temiz" /> Temizlenmiş Mail</label>
+      <label><input type="checkbox" name="veri_turu_yildizli" value="spam" /> Spam Mail</label>
     </div>
 
     <!-- Format -->
